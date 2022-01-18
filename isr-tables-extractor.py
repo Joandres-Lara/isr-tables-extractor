@@ -1,11 +1,13 @@
-import re
-import bs4
+#!/usr/bin/python
+
+from ctypes import ArgumentError
+import sys
 import json
+import bs4
+import re
+from getopt import getopt, GetoptError
 from unidecode import unidecode
-
 from urllib.request import urlopen, Request
-
-URL = "http://dof.gob.mx/nota_detalle.php?codigo=5640505&fecha=12/01/2022"
 
 
 def get_content_url(url):
@@ -117,14 +119,38 @@ def parse_tables(html_string):
     return list(filter(lambda x: x.get("table") != [], tables_list))
 
 
-def main():
-    value = parse_tables(
-        open("./tests/input-html/real-all-tables.html", encoding="utf-8").read())
-    file_json = open("./output.json", "w")
-    file_json.write(json.dumps(value, indent=2))
-    file_json.close()
-    print("Archivo creado")
+def main(argv):
+    try:
+        opts, args = getopt(argv, "u:o", ["url=", "output="])
+    except GetoptError:
+        print("isr-table-extractor -u <url>")
+        sys.exit(2)
+
+    url_input = None
+    output_file = None
+
+    for opt, arg in opts:
+        if opt in ("-u", "--url"):
+            url_input = arg
+        elif opt in ("-o", "--output"):
+            output_file = arg
+
+    tables = None
+
+    if url_input:
+        html_string = get_content_url(url_input)
+        tables = parse_tables(html_string)
+    else:
+        raise ArgumentError("URL is required")
+
+    if output_file == "json":
+        file_json = open("./tables.json", "w")
+        file_json.write(json.dumps(tables, indent=2))
+        file_json.close()
+        print("Archivo tables.json, creado")
+    else:
+        raise ArgumentError("Output file is required")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
